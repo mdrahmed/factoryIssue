@@ -144,7 +144,7 @@ bool CPSTracker::runOnModule(Module &M) {
 						rso << *i;
 						arguments.push_back(rso.str());
 					}
-					// Add space then string format specifier for each argument we will later print
+					// Add string format specifier for each argument we will later print
 					for (size_t i = 0; i < arguments.size(); ++i) {
 						format += " %s\n";
 					}

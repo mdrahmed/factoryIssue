@@ -76,7 +76,8 @@ bool CPSTracker::runOnModule(Module &M) {
 				IRBuilder<> builder(&(*IP));
 				
 				{
-					// using the format specifier for printing the values
+					
+					// Add string format specifier for each argument we will later print
 					std::string format("arg_values: ");
 					for (size_t i = 0; i < arg_values.size(); ++i) {
 						format += " %s = %d\n";
