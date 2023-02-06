@@ -47,7 +47,7 @@ char CPSTracker::ID = 0;
 bool CPSTracker::runOnModule(Module &M) {
 	
 	LLVMContext &context = M.getContext();
-        
+        // Defining the printf function
 	Type *intType = Type::getInt32Ty(context);
         std::vector<Type *> printfArgsTypes({Type::getInt8PtrTy(context)});
         FunctionType *printfType = FunctionType::get(intType, printfArgsTypes, true);
@@ -55,11 +55,12 @@ bool CPSTracker::runOnModule(Module &M) {
 
 	for (auto &F:M){
 		std::vector<std::string> arg_strings;
-		std::vector<Value*> arg_values;
+		std::vector<Value*> arg_values; // used to store functions argument values
 		std::string s;
                 raw_string_ostream rso(s);
 		rso << F.getName() << " ";
 		arg_strings.push_back(rso.str());
+		// Marking how many values a function has 
 		for(auto i = F.arg_begin();i!=F.arg_end();++i){
 			rso << *i <<"\n";
 			arg_strings.push_back(rso.str());
@@ -67,22 +68,14 @@ bool CPSTracker::runOnModule(Module &M) {
 		}
 	
 		
-	//Done
-		//if(F.getName().contains("subtract")){
-		//if(F.getName() == "_ZN2ft23action_listener_publishC1Ev"){
-		//This condition is for testbed code & got all functions needed for VGR graph.
-		
-		//All Publish - worked fine
-		//if(F.getName() == "_ZN2ft23action_listener_publishC1Ev" || F.getName()=="_ZN2ft20TxtMqttFactoryClient23publishStationBroadcastENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEdS6_S6_S6_l" || F.getName()=="_ZN4mqtt12async_client7publishESt10shared_ptrIKNS_7messageEEPvRNS_16iaction_listenerE" || F.getName()=="_ZN2ft20TxtMqttFactoryClient15publishStateHBWENS_13TxtLEDSCode_tENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEliS7_"  ||F.getName()== "_ZN2ft20TxtMqttFactoryClient19publishStateStationENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEENS_13TxtLEDSCode_tES6_liS6_" ||F.getName()=="_ZN2ft20TxtMqttFactoryClient15publishStateDSIENS_13TxtLEDSCode_tENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEliS7_" || F.getName()=="_ZN2ft20TxtMqttFactoryClient15publishStateMPOENS_13TxtLEDSCode_tENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEliS7_" || F.getName()=="_ZN2ft20TxtMqttFactoryClient15publishStateSLDENS_13TxtLEDSCode_tENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEliS7_" || F.getName()=="_ZN2ft20TxtMqttFactoryClient15publishStateVGRENS_13TxtLEDSCode_tENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEliS7_" || F.getName()=="_ZN2ft20TxtMqttFactoryClient15publishStateDSOENS_13TxtLEDSCode_tENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEliS7_" || F.getName()=="_ZN2ft20TxtMqttFactoryClient17publishStateOrderENS_13TxtOrderStateEl" || F.getName()=="_ZN2ft20TxtMqttFactoryClient12publishNfcDSENS_12TxtWorkpieceESt3mapINS_16TxtHistoryCode_tExSt4lessIS3_ESaISt4pairIKS3_xEEEl" || F.getName()=="_ZN2ft20TxtMqttFactoryClient13publishVGR_DoENS_14TxtVgrDoCode_tEPNS_12TxtWorkpieceEl"){
-		
-		//if(F.getName() == "_ZTv0_n12_N2ft23action_listener_publishD1Ev"){
 		//if(F.getName().contains("message_arrived") || F.getName()== "_ZN2ft23action_listener_publishC1Ev" ||F.getName().contains("requestOrder") || F.getName().contains("startThread") || F.getName().contains("start_thread") || F.getName().contains("run") || F.getName().contains("fsmStep") || F.getName().contains("printState") || F.getName().contains("setTarget") || F.getName().contains("moveDeliveryInAndGrip") || F.getName().contains("moveNFC") ){
-		
-		//if(F.getName().contains("message_arrived") || F.getName().contains("publish") || F.getName().contains("requestOrder") || F.getName().contains("startThread") || F.getName().contains("start_thread") || F.getName().contains("run") || F.getName().contains("fsmStep") || F.getName().contains("printState") || F.getName().contains("setTarget")){
+		// I am instrumenting only these certain functions
 		if(F.getName().contains("message_arrived") || F.getName().contains("publish") || F.getName().contains("requestOrder") || F.getName().contains("startThread") || F.getName().contains("start_thread") || F.getName().contains("run") || F.getName().contains("fsmStep") || F.getName().contains("printState") || F.getName().contains("setTarget") || F.getName().contains("moveDeliveryInAndGrip") || F.getName().contains("moveNFC") ){
 			if(F.getName().contains("publish"))
 				errs()<<F.getName()<<"\n";	
-			//This for loop will get the user function		
+			if(F.getName() == "printf" || F.getName().startswith("llvm.dbg"))
+				continue;
+			//This for loop will get the user function i.e., suppose I got a function "message_arrived", then following iterator will tell me the function calling this function.		
 			for(auto ui=F.use_begin();ui!=F.use_end();ui++){
 				if(auto I = dyn_cast<Instruction>(ui->getUser())){
 					auto *BB = I->getParent();
@@ -109,15 +102,14 @@ bool CPSTracker::runOnModule(Module &M) {
 					builder.CreateCall(printfFunc, argsV, "calltmp");				
 				}
 			}
-			
+			// If a function is declared then it will not have basic blocks in them. So, if a function is not delcared then it will have basic block, which I need to insert printf
 			if(!F.isDeclaration()){
 				auto &BB = F.getEntryBlock();        
-				// starting arguments		
-				std::vector<std::string> arguments;
+				std::vector<std::string> arguments; // This vector will be used to store functions arguments name
 				BasicBlock::iterator IP = BB.getFirstInsertionPt();
 				IRBuilder<> builder(&(*IP));
 				
-				// Injecting World time
+				// Injecting World clock
                        		std::time_t now = std::time(0);
                        		char* dt = ctime(&now);
                        		errs()<<"dt: "<<dt<<"Unix time: "<<now<<"\n";
@@ -141,40 +133,42 @@ bool CPSTracker::runOnModule(Module &M) {
                         	errs()<<"Process start time:"<< llvm::format("%0.1f", start) << "ms\n";
 
 				{
-					//// The format string for the printf function, declared as a global literal
+					// Getting the arguments for this function
 					std::string format("\narguments: ");
 					std::string s;
         			        raw_string_ostream rso(s);
 					rso << F.getName() << " ";
 					arguments.push_back(rso.str());
+					// Pushing the argument names in the arguments vector
 					for(auto i = F.arg_begin();i!=F.arg_end();++i){
 						rso << *i;
 						arguments.push_back(rso.str());
 					}
+					// Add space then string format specifier for each argument we will later print
 					for (size_t i = 0; i < arguments.size(); ++i) {
 						format += " %s\n";
 					}
 					Value *str = builder.CreateGlobalStringPtr(format, "");
 					std::vector<Value *> argsV({str});
+					// pushing values into argsV after creating a string pointer to arguments
 					for (auto &s : arguments) {
 						argsV.push_back(builder.CreateGlobalStringPtr(s, ""));
 					}
+					// Calling the printf funcion
 					builder.CreateCall(printfFunc, argsV, "calltmp");				
 				}
-				// till now arguments
-				// Starting to record values		
+				// Till now arguments
+				// Now, starting to record values		
 				{
-				// using the format specifier for printing the values
+					// using the format specifier for printing the values
 					std::string format("arg_values: ");
 					for (size_t i = 0; i < arg_values.size(); ++i) {
-						//format += " %s = %lu\n";
 						format += " %s = %d\n";
 					}
-				// creating the string from format, then converting it into vector
-					//StringRef ft = str(format);
-					//Value *str = builder.CreateGlobalStringPtr(StringRef(format), "");
 					Value *str = builder.CreateGlobalStringPtr(format, "");
 					std::vector<Value *> argsV({str});
+					// If I simply push the values then it works fine but I have to get values for arm-32 bit.
+					// That's why I am bitcasting the values to a 32-bit result and then pushing it. But only this part is causing the error. 
 					for (auto &v : arg_values) {
 					        argsV.push_back(builder.CreateGlobalStringPtr(v->getName(), ""));
 					        const DataLayout &DL = M.getDataLayout();
