@@ -13,7 +13,8 @@ COMPILER = g++
 AR = ar
 
 # WORKING WITH THIS ONE,
-EXECUTEABLE_g++ = clang++-14 -ltcmalloc -v --target=arm-linux-gnueabihf -flegacy-pass-manager -g -Xclang -load -Xclang ./pass/instrument.so
+EXECUTEABLE_g++ = clang++-14 --target=arm-linux-gnueabihf -flegacy-pass-manager -g -Xclang -load -Xclang ./pass/instrument.so
+# EXECUTEABLE_g++ = clang++-14 --target=arm-linux-gnueabihf
 
 LIB_CFLAGS = -L"/home/ubuntu-18/Desktop/paho.mqtt.c/build/_install/lib" -L"/home/ubuntu-18/Desktop/paho.mqtt.cpp/build/_install/lib" -L"deps/lib"
 LIB_INC_CFLAGS = -I"/home/ubuntu-18/Desktop/paho.mqtt.c/build/_install/include/" -I"/home/ubuntu-18/Desktop/paho.mqtt.cpp/build/_install/include/" -I"deps/include"
@@ -25,11 +26,11 @@ COMPILER_FLAGS_DEBUG = -std=gnu++0x -std=c++0x -D"DEBUG" -D"SPDLOG_ACTIVE_LEVEL=
 
 COMPILER_FLAGS_RELEASE = -std=gnu++0x -std=c++0x -D"ENDIAN_LITTLE" -I"TxtSmartFactoryLib/include" -I"TxtSmartFactoryLib/libs" $(LIB_INC_CFLAGS) -O3 -Wall -c -fmessage-length=0 -Wno-psabi
 
-#LINKER_FLAGS_RELEASE_PATHS = -L"deps/lib" -L"TxtSmartFactoryLib/Posix_Release/src" -L"TxtSmartFactoryLib/Posix_Release"
-LINKER_FLAGS_RELEASE_PATHS =  $(LIB_CFLAGS) -L"TxtSmartFactoryLib/Posix_Release/src" -L"TxtSmartFactoryLib/Posix_Release"
+LINKER_FLAGS_RELEASE_PATHS = -L"deps/lib" -L"TxtSmartFactoryLib/Posix_Release/src" -L"TxtSmartFactoryLib/Posix_Release"
+#LINKER_FLAGS_RELEASE_PATHS =  $(LIB_CFLAGS) -L"TxtSmartFactoryLib/Posix_Release/src" -L"TxtSmartFactoryLib/Posix_Release"
 
-#LINKER_FLAGS_DEBUG_PATHS = -L"deps/lib" -L"TxtSmartFactoryLib/Posix_Debug/src" -L"TxtSmartFactoryLib/Posix_Debug"
-LINKER_FLAGS_DEBUG_PATHS = $(LIB_CFLAGS) -L"TxtSmartFactoryLib/Posix_Debug/src" -L"TxtSmartFactoryLib/Posix_Debug"
+LINKER_FLAGS_DEBUG_PATHS = -L"deps/lib" -L"TxtSmartFactoryLib/Posix_Debug/src" -L"TxtSmartFactoryLib/Posix_Debug"
+#LINKER_FLAGS_DEBUG_PATHS = $(LIB_CFLAGS) -L"TxtSmartFactoryLib/Posix_Debug/src" -L"TxtSmartFactoryLib/Posix_Debug"
 
 
 LINKER_FLAGS_LIBS = -l"SDLWidgetsLib" \
