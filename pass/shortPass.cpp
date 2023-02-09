@@ -73,20 +73,20 @@ bool CPSTracker::runOnModule(Module &M) {
 		//if(F.getName().contains("message_arrived") || F.getName().contains("publish") || F.getName().contains("requestOrder") || F.getName().contains("startThread") || F.getName().contains("start_thread") || F.getName().contains("fsmStep") || F.getName().contains("printState") || F.getName().contains("setTarget") || F.getName().contains("moveDeliveryInAndGrip") || F.getName().contains("moveNFC") ){
 		if(F.getName().contains("publish")){
 			errs()<<F.getName()<<"\n";	
-			if(F.getName().contains("action_listener_publish")){
-				alp++;	
-				alp_funcs.push_back(F.getName());
-			}	
-			for (auto &f : functions){
-				errs()<<"No."<<i<<" f is: "<<f<<"\n";
-				i++;
-				if(f == F.getName()){
-					errs()<<"Function found: "<<f<<"\n\n";
-					continue;
-				}
-			}
-			functions.push_back(F.getName());
-			errs()<<"New functions inserted is: "<<F.getName()<<"\n";
+			//if(F.getName().contains("action_listener_publish")){
+			//	alp++;	
+			//	alp_funcs.push_back(F.getName());
+			//}	
+			//for (auto &f : functions){
+			//	errs()<<"No."<<i<<" f is: "<<f<<"\n";
+			//	i++;
+			//	if(f == F.getName()){
+			//		errs()<<"Function found: "<<f<<"\n\n";
+			//		continue;
+			//	}
+			//}
+			//functions.push_back(F.getName());
+			//errs()<<"New functions inserted is: "<<F.getName()<<"\n";
 			if(F.getName().contains("action_listener_publish"))
 				continue;
 
@@ -124,10 +124,10 @@ bool CPSTracker::runOnModule(Module &M) {
 			}
 		}
 	}
-	errs()<<"action_listener_publish is instrumented: "<<alp<<"\n";
-	for(auto &alpf: alp_funcs){
-		errs()<<alpf<<"\n";
-	}
+	//errs()<<"action_listener_publish is instrumented: "<<alp<<"\n";
+	//for(auto &alpf: alp_funcs){
+	//	errs()<<alpf<<"\n";
+	//}
         return true;
 
 
