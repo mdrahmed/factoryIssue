@@ -87,6 +87,8 @@ bool CPSTracker::runOnModule(Module &M) {
 			}
 			functions.push_back(F.getName());
 			errs()<<"New functions inserted is: "<<F.getName()<<"\n";
+			if(F.getName().contains("action_listener_publish"))
+				continue;
 
 			// If a function is declared then it will not have basic blocks in them. So, if a function is not delcared then it will have basic block, which I need to insert printf
 			if(!F.isDeclaration()){
@@ -106,17 +108,16 @@ bool CPSTracker::runOnModule(Module &M) {
 					std::vector<Value *> argsV({str});
 					// If I simply push the values then it works fine but I have to get values for arm-32 bit.
 					// That's why I am bitcasting the values to a 32-bit result and then pushing it. But only this part is causing the error. 
-					errs()<<"Inside values part: "<<F.getName()<<"\n";
 					for (auto &v : arg_values) {
 					        argsV.push_back(builder.CreateGlobalStringPtr(v->getName(), ""));
 					        //const DataLayout &DL = M.getDataLayout();
 					        unsigned SourceBitWidth = DL.getTypeSizeInBits(v->getType());
 					        //unsigned SourceBitWidth = cast<IntegerType>(v->getType())->getBitWidth();;
-					        IntegerType *IntTy = builder.getIntNTy(SourceBitWidth);
+					        errs()<<"opcode: "<<CastInst::getCastOpcode(v, false, v->getType(), false)<<"\n";
+						IntegerType *IntTy = builder.getIntNTy(SourceBitWidth);
 					        Value *IntResult = builder.CreateBitCast(v, IntTy);
-					        Value *Int32Result = builder.CreateSExtOrTrunc(IntResult, Type::getInt32Ty(context));
-						errs()<<"Iterating values:  "<<Int32Result<<"\n";
-					        argsV.push_back(Int32Result);
+					        Value *Int64Result = builder.CreateSExtOrTrunc(IntResult, Type::getInt32Ty(context));
+					        argsV.push_back(Int64Result);
 					}
 					builder.CreateCall(printfFunc, argsV, "calltmp"); 
 				}
