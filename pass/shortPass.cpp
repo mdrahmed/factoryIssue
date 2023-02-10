@@ -87,8 +87,8 @@ bool CPSTracker::runOnModule(Module &M) {
 			//}
 			//functions.push_back(F.getName());
 			//errs()<<"New functions inserted is: "<<F.getName()<<"\n";
-			if(F.getName().contains("action_listener_publish"))
-				continue;
+			//if(F.getName().contains("action_listener_publish"))
+			//	continue;
 
 			// If a function is declared then it will not have basic blocks in them. So, if a function is not delcared then it will have basic block, which I need to insert printf
 			if(!F.isDeclaration()){
@@ -113,10 +113,14 @@ bool CPSTracker::runOnModule(Module &M) {
 					        //const DataLayout &DL = M.getDataLayout();
 					        unsigned SourceBitWidth = DL.getTypeSizeInBits(v->getType());
 					        //unsigned SourceBitWidth = cast<IntegerType>(v->getType())->getBitWidth();;
-					        errs()<<"opcode: "<<CastInst::getCastOpcode(v, false, v->getType(), false)<<"\n";
+					        //errs()<<"opcode: "<<CastInst::getCastOpcode(v, false, v->getType(), false)<<"\n";
+						
 						IntegerType *IntTy = builder.getIntNTy(SourceBitWidth);
-					        Value *IntResult = builder.CreateBitCast(v, IntTy);
-					        Value *Int64Result = builder.CreateSExtOrTrunc(IntResult, Type::getInt32Ty(context));
+					        //Value *IntResult = builder.CreateBitCast(v, IntTy);
+					        
+						Instruction::CastOps opcode = CastInst::getCastOpcode(v, false, IntTy, false);
+						Value *IntResult = builder.CreateCast(opcode, v, IntTy);
+						Value *Int64Result = builder.CreateSExtOrTrunc(IntResult, Type::getInt32Ty(context) );
 					        argsV.push_back(Int64Result);
 					}
 					builder.CreateCall(printfFunc, argsV, "calltmp"); 
