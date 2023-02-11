@@ -117,9 +117,19 @@ bool CPSTracker::runOnModule(Module &M) {
 						
 						IntegerType *IntTy = builder.getIntNTy(SourceBitWidth);
 					        //Value *IntResult = builder.CreateBitCast(v, IntTy);
-					        
-						Instruction::CastOps opcode = CastInst::getCastOpcode(v, false, IntTy, false);
-						Value *IntResult = builder.CreateCast(opcode, v, IntTy);
+						Instruction::CastOps opcode;
+                                                Value *IntResult;
+					        if(v->getType()->isPointerTy()){
+							IntResult = builder.CreatePtrToInt(v, IntTy);
+						}
+						else if(v->getType()->isArrayTy()){
+							int value32 = *(int*)v;
+							Value* val32 = (Value*)value32;
+							IntResult = builder.CreateBitCast(val32, IntTy);
+						}	
+						else{
+							IntResult = builder.CreateBitCast(v, IntTy);
+						}
 						Value *Int64Result = builder.CreateSExtOrTrunc(IntResult, Type::getInt32Ty(context) );
 					        argsV.push_back(Int64Result);
 					}
