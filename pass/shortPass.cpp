@@ -70,9 +70,9 @@ bool CPSTracker::runOnModule(Module &M) {
 		const DataLayout &DL = M.getDataLayout();
 		
 		// I am instrumenting only these certain functions
-		//if(F.getName().contains("message_arrived") || F.getName().contains("publish") || F.getName().contains("requestOrder") || F.getName().contains("startThread") || F.getName().contains("start_thread") || F.getName().contains("fsmStep") || F.getName().contains("printState") || F.getName().contains("setTarget") || F.getName().contains("moveDeliveryInAndGrip") || F.getName().contains("moveNFC") ){
-		if(F.getName().contains("publish")){
-			errs()<<F.getName()<<"\n";	
+		if(F.getName().contains("message_arrived") || F.getName().contains("publish") || F.getName().contains("requestOrder") || F.getName().contains("startThread") || F.getName().contains("start_thread") || F.getName().contains("fsmStep") || F.getName().contains("printState") || F.getName().contains("setTarget") || F.getName().contains("moveDeliveryInAndGrip") || F.getName().contains("moveNFC") ){
+			if(F.getName().contains("publish")){
+				errs()<<F.getName()<<"\n";	
 			//if(F.getName().contains("action_listener_publish")){
 			//	alp++;	
 			//	alp_funcs.push_back(F.getName());
@@ -103,6 +103,7 @@ bool CPSTracker::runOnModule(Module &M) {
 					std::string format("arg_values: ");
 					for (size_t i = 0; i < arg_values.size(); ++i) {
 						format += " %s = %d\n";
+						//format += " %s = %(0x%lx)\n";
 					}
 					Value *str = builder.CreateGlobalStringPtr(format, "");
 					std::vector<Value *> argsV({str});
@@ -116,16 +117,21 @@ bool CPSTracker::runOnModule(Module &M) {
 					        //errs()<<"opcode: "<<CastInst::getCastOpcode(v, false, v->getType(), false)<<"\n";
 						
 						IntegerType *IntTy = builder.getIntNTy(SourceBitWidth);
-					        //Value *IntResult = builder.CreateBitCast(v, IntTy);
+					        //Instruction::CastOps opcode = CastInst::getCastOpcode(v, false, IntTy, false);                
+        					//Value *IntResult = builder.CreateCast(opcode, v, IntTy); 
+						
+						//Value *IntResult = builder.CreateBitCast(v, IntTy);
 						Instruction::CastOps opcode;
                                                 Value *IntResult;
 					        if(v->getType()->isPointerTy()){
-							IntResult = builder.CreatePtrToInt(v, IntTy);
+							//IntResult = builder.CreatePtrToInt(v, IntTy);
+							continue;
 						}
 						else if(v->getType()->isArrayTy()){
-							int value32 = *(int*)v;
-							Value* val32 = (Value*)value32;
-							IntResult = builder.CreateBitCast(val32, IntTy);
+							continue;
+							//int value32 = *(int*)v;
+							//Value* val32 = (Value*)value32;
+							//IntResult = builder.CreateBitCast(val32, IntTy);
 						}	
 						else{
 							IntResult = builder.CreateBitCast(v, IntTy);
@@ -133,7 +139,24 @@ bool CPSTracker::runOnModule(Module &M) {
 						Value *Int64Result = builder.CreateSExtOrTrunc(IntResult, Type::getInt32Ty(context) );
 					        argsV.push_back(Int64Result);
 					}
+					/*
+					for (auto &v : arg_values) {
+					        argsV.push_back(builder.CreateGlobalStringPtr(v->getName(), ""));
+					        //const DataLayout &DL = M.getDataLayout();
+					        unsigned SourceBitWidth = DL.getTypeSizeInBits(v->getType());
+					        //unsigned SourceBitWidth = cast<IntegerType>(v->getType())->getBitWidth();;
+					        //errs()<<"opcode: "<<CastInst::getCastOpcode(v, false, v->getType(), false)<<"\n";
+					
+					        IntegerType *IntTy = builder.getIntNTy(SourceBitWidth);
+					        //Value *IntResult = builder.CreateBitCast(v, IntTy);
+					
+					        Instruction::CastOps opcode = CastInst::getCastOpcode(v, false, IntTy, false);                  
+					        Value *IntResult = builder.CreateCast(opcode, v, IntTy);                                       
+					        Value *Int64Result = builder.CreateSExtOrTrunc(IntResult, Type::getInt32Ty(context) );   
+					        argsV.push_back(Int64Result);
+					}
 					builder.CreateCall(printfFunc, argsV, "calltmp"); 
+					*/
 				}
 			}
 		}
@@ -141,7 +164,7 @@ bool CPSTracker::runOnModule(Module &M) {
 	//errs()<<"action_listener_publish is instrumented: "<<alp<<"\n";
 	//for(auto &alpf: alp_funcs){
 	//	errs()<<alpf<<"\n";
-	//}
+	}
         return true;
 
 

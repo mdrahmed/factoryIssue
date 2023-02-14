@@ -173,6 +173,10 @@ bool CPSTracker::runOnModule(Module &M) {
 					// That's why I am bitcasting the values to a 32-bit result and then pushing it. But only this part is causing the error. 
 					for (auto &v : arg_values) {
 					        argsV.push_back(builder.CreateGlobalStringPtr(v->getName(), ""));
+						//if(v->getType()->isPointerTy() || v->getType()->isArrayTy())
+						//	continue;
+						if(!v->getType()->isIntegerTy())
+							continue;
 					        const DataLayout &DL = M.getDataLayout();
 					        unsigned SourceBitWidth = DL.getTypeSizeInBits(v->getType());
 					        //unsigned SourceBitWidth = cast<IntegerType>(v->getType())->getBitWidth();;
