@@ -69,12 +69,10 @@ bool CPSTracker::runOnModule(Module &M) {
 			arg_values.push_back(i);
 		}
 	
-		
-		//if(F.getName().contains("message_arrived") || F.getName()== "_ZN2ft23action_listener_publishC1Ev" ||F.getName().contains("requestOrder") || F.getName().contains("startThread") || F.getName().contains("start_thread") || F.getName().contains("run") || F.getName().contains("fsmStep") || F.getName().contains("printState") || F.getName().contains("setTarget") || F.getName().contains("moveDeliveryInAndGrip") || F.getName().contains("moveNFC") ){
+		// Added HBW functions	
+		if(F.getName().contains("subTopic") || F.getName().contains("fetch") || F.getName().contains("store") || F.getName().contains("Notify") || F.getName().contains("Update") ||  F.getName().contains("message_arrived") || F.getName().contains("publish") || F.getName().contains("requestVGRfetchContainer") || F.getName().contains("requestOrder") || F.getName().contains("startThread") || F.getName().contains("start_thread") || F.getName().contains("run") || F.getName().contains("fsmStep") || F.getName().contains("printState") || F.getName().contains("setTarget") || F.getName().contains("moveDeliveryInAndGrip") || F.getName().contains("moveNFC") ){
 		// I am instrumenting only these certain functions
-		if(F.getName().contains("message_arrived") || F.getName().contains("publish") || F.getName().contains("requestOrder") || F.getName().contains("startThread") || F.getName().contains("start_thread") || F.getName().contains("run") || F.getName().contains("fsmStep") || F.getName().contains("printState") || F.getName().contains("setTarget") || F.getName().contains("moveDeliveryInAndGrip") || F.getName().contains("moveNFC") ){
-			if(F.getName().contains("publish"))
-				errs()<<F.getName()<<"\n";	
+		//if(F.getName().contains("message_arrived") || F.getName().contains("publish") || F.getName().contains("requestOrder") || F.getName().contains("startThread") || F.getName().contains("start_thread") || F.getName().contains("run") || F.getName().contains("fsmStep") || F.getName().contains("printState") || F.getName().contains("setTarget") || F.getName().contains("moveDeliveryInAndGrip") || F.getName().contains("moveNFC") ){
 			if(F.getName() == "printf" || F.getName().startswith("llvm.dbg"))
 				continue;
 			//This for loop will get the user function i.e., suppose I got a function "message_arrived", then following iterator will tell me the function calling this function.		
@@ -90,6 +88,8 @@ bool CPSTracker::runOnModule(Module &M) {
 					raw_string_ostream rso(s);
 					rso << userFunction->getName()<<" is calling "<<F.getName()<<"\n";
 					rso << F.getName() << " is called from this callInst"<<*ui->getUser()<<"\n";
+					if(F.getName().contains("Notify") || F.getName().contains("Update"))
+						errs()<<"Caller of Notify and update is instrumented\n";
 					user.push_back(rso.str());
 
 					for (size_t i = 0; i < user.size(); ++i) {
@@ -106,6 +106,9 @@ bool CPSTracker::runOnModule(Module &M) {
 			}
 			// If a function is declared then it will not have basic blocks in them. So, if a function is not delcared then it will have basic block, which I need to insert printf
 			if(!F.isDeclaration()){
+				if(F.getName().contains("store") && F.getName().contains("TxtHighBayWarehouse"))
+                                	errs()<<"store functioni inside HBW is instrumented"<<F.getName()<<"\n";
+
 				auto &BB = F.getEntryBlock();        
 				std::vector<std::string> arguments; // This vector will be used to store functions arguments name
 				BasicBlock::iterator IP = BB.getFirstInsertionPt();
@@ -114,7 +117,7 @@ bool CPSTracker::runOnModule(Module &M) {
 				// Injecting World clock
                        		std::time_t now = std::time(0);
                        		char* dt = ctime(&now);
-                       		errs()<<"dt: "<<dt<<"Unix time: "<<now<<"\n";
+                       		//errs()<<"dt: "<<dt<<"Unix time: "<<now<<"\n";
 			
 				// date and time
 				Value *str = builder.CreateGlobalStringPtr(dt, "str");
@@ -132,7 +135,7 @@ bool CPSTracker::runOnModule(Module &M) {
 
 				//Process start time is printed here
                         	auto start = TimeRecord::getCurrentTime(false).getProcessTime();
-                        	errs()<<"Process start time:"<< llvm::format("%0.1f", start) << "ms\n";
+                        	//errs()<<"Process start time:"<< llvm::format("%0.1f", start) << "ms\n";
 
 				{
 					// Getting the arguments for this function
@@ -165,34 +168,54 @@ bool CPSTracker::runOnModule(Module &M) {
 					// using the format specifier for printing the values
 					std::string format("arg_values: ");
 					for (size_t i = 0; i < arg_values.size(); ++i) {
-						format += " %s = %d\n";
+						format += "%d\n";
 					}
 					Value *str = builder.CreateGlobalStringPtr(format, "");
 					std::vector<Value *> argsV({str});
 					// If I simply push the values then it works fine but I have to get values for arm-32 bit.
 					// That's why I am bitcasting the values to a 32-bit result and then pushing it. But only this part is causing the error. 
+					
+					// Worked with 32 bit int and then all values except pointer and array worked
 					for (auto &v : arg_values) {
-					        argsV.push_back(builder.CreateGlobalStringPtr(v->getName(), ""));
-						//if(v->getType()->isPointerTy() || v->getType()->isArrayTy())
-						//	continue;
-						if(!v->getType()->isIntegerTy())
-							continue;
+					        //argsV.push_back(builder.CreateGlobalStringPtr(v->getName(), ""));
 					        const DataLayout &DL = M.getDataLayout();
 					        unsigned SourceBitWidth = DL.getTypeSizeInBits(v->getType());
 					        //unsigned SourceBitWidth = cast<IntegerType>(v->getType())->getBitWidth();;
 					        IntegerType *IntTy = builder.getIntNTy(SourceBitWidth);
-					        Value *IntResult = builder.CreateBitCast(v, IntTy);
+					        //Value *IntResult = builder.CreateBitCast(v, IntTy);
+						
+						Value *IntResult;
+						
+						if(v->getType()->isArrayTy()){
+							continue;
+						//	auto *ArrayTy = dyn_cast<ArrayType>(v->getType());
+       						//	auto NumElements = ArrayTy->getNumElements();
+       						//	auto *NewArrayType = ArrayType::get(ArrayTy->getElementType(), NumElements);
+       						//	auto *NewIntArrayType = ArrayType::get(builder.getIntNTy(SourceBitWidth), NumElements);
+       						//	auto *NewArray = builder.CreateBitCast(v, NewArrayType);
+       						//	IntResult = builder.CreateBitCast(NewArray, NewIntArrayType);
+						}
+						if(v->getType()->isPointerTy()){
+							IntResult = builder.CreatePtrToInt(v, IntTy);
+						}	
+						else{
+							IntResult = builder.CreateBitCast(v, IntTy);
+						}
 					        Value *Int32Result = builder.CreateSExtOrTrunc(IntResult, Type::getInt32Ty(context));
-					        argsV.push_back(Int32Result);
+					        //llvm_unreachable("Invalid type for cast");
+						argsV.push_back(Int32Result);
+						////Value *ty = Int32Result->getType(); //problem is here
+						////argsV.push_back(ty);
+						//}
 					}
 					builder.CreateCall(printfFunc, argsV, "calltmp"); 
 				}
 
 				//Process end time is printed here
 				auto end = TimeRecord::getCurrentTime(false).getProcessTime();
-                                errs()<<"Process end time:"<< llvm::format("%0.1f", end ) << "ms\n";
+                                //errs()<<"Process end time:"<< llvm::format("%0.1f", end ) << "ms\n";
 				auto totalProcessTime = end-start;
-				errs()<<"Total process time: "<<llvm::format("%0.1f", totalProcessTime)<<"ms\n";
+				//errs()<<"Total process time: "<<llvm::format("%0.1f", totalProcessTime)<<"ms\n";
 				
 				std::string process("Total Process time:");
 				process += std::to_string(totalProcessTime) +"\n";

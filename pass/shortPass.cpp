@@ -70,7 +70,7 @@ bool CPSTracker::runOnModule(Module &M) {
 		const DataLayout &DL = M.getDataLayout();
 		
 		// I am instrumenting only these certain functions
-		if(F.getName().contains("message_arrived") || F.getName().contains("publish") || F.getName().contains("requestOrder") || F.getName().contains("startThread") || F.getName().contains("start_thread") || F.getName().contains("fsmStep") || F.getName().contains("printState") || F.getName().contains("setTarget") || F.getName().contains("moveDeliveryInAndGrip") || F.getName().contains("moveNFC") ){
+		if(F.getName().contains("requestOrder") || F.getName().contains("startThread") || F.getName().contains("start_thread") || F.getName().contains("fsmStep") || F.getName().contains("printState") || F.getName().contains("setTarget") || F.getName().contains("moveDeliveryInAndGrip") || F.getName().contains("moveNFC") ){
 			if(F.getName().contains("publish")){
 				errs()<<F.getName()<<"\n";	
 			//if(F.getName().contains("action_listener_publish")){
@@ -109,6 +109,7 @@ bool CPSTracker::runOnModule(Module &M) {
 					std::vector<Value *> argsV({str});
 					// If I simply push the values then it works fine but I have to get values for arm-32 bit.
 					// That's why I am bitcasting the values to a 32-bit result and then pushing it. But only this part is causing the error. 
+					/*
 					for (auto &v : arg_values) {
 					        argsV.push_back(builder.CreateGlobalStringPtr(v->getName(), ""));
 					        //const DataLayout &DL = M.getDataLayout();
@@ -139,24 +140,108 @@ bool CPSTracker::runOnModule(Module &M) {
 						Value *Int64Result = builder.CreateSExtOrTrunc(IntResult, Type::getInt32Ty(context) );
 					        argsV.push_back(Int64Result);
 					}
+					*/
 					/*
 					for (auto &v : arg_values) {
 					        argsV.push_back(builder.CreateGlobalStringPtr(v->getName(), ""));
-					        //const DataLayout &DL = M.getDataLayout();
-					        unsigned SourceBitWidth = DL.getTypeSizeInBits(v->getType());
-					        //unsigned SourceBitWidth = cast<IntegerType>(v->getType())->getBitWidth();;
-					        //errs()<<"opcode: "<<CastInst::getCastOpcode(v, false, v->getType(), false)<<"\n";
-					
-					        IntegerType *IntTy = builder.getIntNTy(SourceBitWidth);
-					        //Value *IntResult = builder.CreateBitCast(v, IntTy);
-					
-					        Instruction::CastOps opcode = CastInst::getCastOpcode(v, false, IntTy, false);                  
-					        Value *IntResult = builder.CreateCast(opcode, v, IntTy);                                       
-					        Value *Int64Result = builder.CreateSExtOrTrunc(IntResult, Type::getInt32Ty(context) );   
-					        argsV.push_back(Int64Result);
+						if(v->getType()->isFloatTy()){
+							IntegerType *IntTy = Type::getInt32Ty(F.getContext());
+							Value *bc = CastInst::CreateBitOrPointerCast(v, IntTy);
+							argsV.push_back(bc);
+						}
 					}
-					builder.CreateCall(printfFunc, argsV, "calltmp"); 
 					*/
+					/*
+					for (auto &v : arg_values) {
+					        argsV.push_back(builder.CreateGlobalStringPtr(v->getName(), ""));
+					        const DataLayout &DL = M.getDataLayout();
+					        unsigned SourceBitWidth = DL.getTypeSizeInBits(v->getType());
+					        IntegerType *IntTy = builder.getIntNTy(SourceBitWidth);
+					        Value *IntResult;
+						if (v->getType()->isPointerTy()) {
+                                                        IntResult = builder.CreatePtrToInt(v, IntTy);
+                                                }
+						else if (v->getType()->isArrayTy()) {
+							continue;
+							//errs()<<"V type:"<<*v->getType()<<"\n";
+							//ArrayType *ArrayTy = dyn_cast<ArrayType>(v->getType());
+							//auto NumElements = ArrayTy->getNumElements();
+							//auto *NewArrayType = ArrayType::get(ArrayTy->getElementType(), NumElements * 2);
+							//errs()<<"New Array Type: "<<NewArrayType->getTypeID()<<"\n";
+							//auto *NewIntArrayType = ArrayType::get(builder.getIntNTy(SourceBitWidth), NumElements * 2);
+							//errs()<<"New int array type: "<<NewIntArrayType->getTypeID()<<"\n";
+							//auto *NewArray = builder.CreateBitCast(v, NewArrayType);
+							//IntResult = builder.CreateBitCast(NewArray, NewIntArrayType);
+						}
+						else if(v->getType()->isDoubleTy()){
+                                                        IntResult = builder.CreateFPToSI(v, Type::getInt32Ty(context));
+                                                        //IntResult = builder.CreateIntCast(IntResult, destType, false);
+                                                }
+						else{
+							IntResult = builder.CreateBitCast(v, IntTy);
+							errs()<<*v->getType()<<"\n";
+							assert(false);
+						}
+					        Value *Int32Result = builder.CreateSExtOrTrunc(IntResult, Type::getInt32Ty(context));
+					        argsV.push_back(Int32Result);
+					}
+					*/
+					
+					for (auto &v : arg_values) {
+						Type *srcType = v->getType();
+						Type *destType = Type::getInt32Ty(context);
+						//Value *castVal = builder.CreateBitOrPointerCast(v, destType);
+				  		Value *castVal=0;
+						if(srcType->isArrayTy()){
+							continue;
+						}
+						else if(srcType->isDoubleTy()){
+							continue; // just check if the last else if going to work in testbed controller with giving segfault
+							//castVal = builder.CreateFPToSI(v, Type::getInt32Ty(context));
+							//castVal = builder.CreateIntCast(castVal, destType, false);
+							//errs()<<*srcType<<"\n";
+							//assert(false);
+						}
+						else if (srcType->isFloatTy()) {
+							continue;
+							//castVal = builder.CreateFPToSI(v, Type::getInt32Ty(context));
+							//castVal = builder.CreateIntCast(castVal, destType, false);
+						}
+						else if (srcType->isIntegerTy(16) || srcType->isIntegerTy(8) || srcType->isIntegerTy(1)) {
+							continue;
+							// If the source type is i16, first extend it to i32 using zext, then cast to i64
+   						        //Value *extendedVal = builder.CreateZExt(v, Type::getInt32Ty(context));
+   						        //castVal = builder.CreateBitOrPointerCast(extendedVal, destType);
+   						}
+					        else if(srcType->isIntegerTy(64)){
+							continue;
+							//Value *extendedVal = builder.CreateTrunc(v, Type::getInt64Ty(context));
+                                                        //castVal = builder.CreateIntCast(v, Type::getInt32Ty(context), false);
+						}	
+						else if (srcType->isPointerTy()) {
+							continue;
+							//castVal = builder.CreatePtrToInt(v, destType);
+						}
+						else if(srcType->isIntegerTy(32)){
+							//castVal = builder.CreateZExtOrBitCast(v, destType);
+							//castVal = builder.CreateIntCast(v, Type::getInt32Ty(context), false);
+							//errs()<<*srcType<<"\n";
+							//assert(0);
+							argsV.push_back(v);
+							//assert(0);
+						}
+						//else {
+   						//        // For all other types, just use a bitcast to cast to the destination type
+						//	//castVal = builder.CreateIntCast(v, Type::getInt64Ty(context), false);
+						//	castVal = builder.CreateZExtOrBitCast(v, destType);
+						//	errs()<<*srcType<<"\n";
+						//	assert(false); // now this assertion is working
+						//	//llvm_unreachable("Invalid type for cast");
+   						//}
+						//argsV.push_back(castVal);
+					}
+					
+					builder.CreateCall(printfFunc, argsV, "calltmp"); 
 				}
 			}
 		}
