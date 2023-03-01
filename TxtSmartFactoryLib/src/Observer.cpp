@@ -9,6 +9,7 @@
 
 #include <chrono>
 #include <ctime>
+#include <iostream>
 
 #include "spdlog/spdlog.h"
 
@@ -39,6 +40,8 @@ void SubjectObserver::Detach (Observer* o)
 
 void SubjectObserver::Notify ()
 {
+	std::cout << "Notify function inside TxtHighBayWarehouseStorage::store is called after checking this condition: isValidPos(nextFetchPos)" << std::endl;
+		
 	//SPDLOG_LOGGER_TRACE(spdlog::get("console"), "Notify 1");
 #ifdef DEBUG
 	auto start = std::chrono::system_clock::now();

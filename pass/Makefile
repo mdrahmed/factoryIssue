@@ -6,7 +6,8 @@ CLANG_LFL=$(shell llvm-config-14 --ldflags --libs)
 CLANG=clang++-14
 PASS=instrument.so
 #PASS_SRC=shortPass.cpp
-PASS_SRC=longPass.cpp 
+#PASS_SRC=longPass.cpp 
+PASS_SRC=IfConditionFinder.cpp
 LL=example.ll
 CPP_file=example.cpp
 Objects=ex instrument.so *.ll
@@ -20,7 +21,7 @@ $(PASS): $(PASS_SRC)
 	$(CLANG) $(CLANG_CFL) -g -shared $< -o $@
 
 ex: $(CPP_file)  
-	$(CLANG) -o $@ -flegacy-pass-manager -g -Xclang -load -Xclang ./instrument.so $<
+	$(CLANG) -o $@ -fno-discard-value-names -flegacy-pass-manager -g -Xclang -load -Xclang ./instrument.so $<
 
 .PHONY: clean
 clean:

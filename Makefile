@@ -13,11 +13,17 @@ COMPILER = g++
 AR = ar
 
 # WORKING WITH THIS ONE,
-EXECUTEABLE_g++ = clang++-14 --target=arm-linux-gnueabihf -flegacy-pass-manager -g -Xclang -load -Xclang ./pass/instrument.so
+EXECUTEABLE_g++ = clang++-14 --target=arm-linux-gnueabihf -fno-discard-value-names -flegacy-pass-manager -g -Xclang -load -Xclang /home/u18new/LLVM_PASSES/LogPasses-new/messagePublishFunc/instrument.so
 # EXECUTEABLE_g++ = clang++-14 --target=arm-linux-gnueabihf
 
-LIB_CFLAGS = -L"../Desktop/paho.mqtt.c/build/_install/lib" -L"/home/ubuntu-18/Desktop/paho.mqtt.cpp/build/_install/lib" -L"deps/lib"
-LIB_INC_CFLAGS = -I"../Desktop/paho.mqtt.c/build/_install/include/" -I"/home/ubuntu-18/Desktop/paho.mqtt.cpp/build/_install/include/" -I"deps/include"
+# The libraries present in ../Desktop/paho.mqtt.c and ../Desktop/paho.mqtt.cpp are not compatible with the libraries used by the txt-controllers
+#LIB_CFLAGS = -L"../Desktop/paho.mqtt.c/build/_install/lib" -L"../Desktop/paho.mqtt.cpp/build/_install/lib" -L"deps/lib"
+#LIB_INC_CFLAGS = -I"../Desktop/paho.mqtt.c/build/_install/include/" -I"../Desktop/paho.mqtt.cpp/build/_install/include/" -I"deps/include"
+
+# Now changing,
+LIB_CFLAGS = -L"deps/lib"
+LIB_INC_CFLAGS = -I"deps/include"
+
 
 EXECUTEABLE_ar = $(TOOLCHAIN_BIN_PATH)/$(TOOLCHAIN_PREFIX)$(AR)
 BIN_DIR = bin
@@ -112,11 +118,10 @@ TxtSmartFactoryLib/Posix_Debug/src/%.o: TxtSmartFactoryLib/src/%.cpp
 
 # creating IR of TxtSmartFactoryLib cpp files
 TxtSmartFactoryLib/Posix_Debug/src/%.ll: TxtSmartFactoryLib/src/%.cpp
-	$(EXECUTEABLE_g++) $(COMPILER_FLAGS_DEBUG) -emit-llvm -S -fPIC -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -o "$@" $<
+	$(EXECUTEABLE_g++) $(COMPILER_FLAGS_DEBUG) -fno-discard-value-names -emit-llvm -S -fPIC -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -o "$@" $<
 
 TxtFactoryClient/src/%.ll: TxtFactoryClient/src/%.cpp
-	$(EXECUTEABLE_g++) $(COMPILER_FLAGS_DEBUG) -emit-llvm -S -D"CLIENT_HBW" -fPIC -MMD -MP -MF"$(@:%.o=%.d)" -o "$@" $<
-
+	$(EXECUTEABLE_g++) $(COMPILER_FLAGS_DEBUG) -fno-discard-value-names -emit-llvm -S -D"CLIENT_HBW" -fPIC -MMD -MP -MF"$(@:%.o=%.d)" -o "$@" $<
 
 TxtSmartFactoryLib/Posix_Debug/libs/%.o: TxtSmartFactoryLib/libs/%.c
 	$(EXECUTEABLE_g++) $(COMPILER_FLAGS_DEBUG) -fPIC -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -o "$@" $<

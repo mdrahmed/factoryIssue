@@ -177,6 +177,7 @@ bool TxtHighBayWarehouseStorage::storeContainer()
 
 bool TxtHighBayWarehouseStorage::store(TxtWorkpiece _wp)
 {
+	std::cout << "store function inside TxtHighBayWarehouseStorage is called" << std::endl;
 	SPDLOG_LOGGER_TRACE(spdlog::get("console"), "store wp:{} {} {}",_wp.tag_uid,_wp.type,_wp.state);
 	/*nextStorePos.x = -1; //set invalid pos
 	nextStorePos.y = -1;
@@ -207,6 +208,7 @@ bool TxtHighBayWarehouseStorage::store(TxtWorkpiece _wp)
 		SPDLOG_LOGGER_DEBUG(spdlog::get("console"), "OK -> nextStorePos type {} ",_wp.type);
 		wp[nextFetchPos.x][nextFetchPos.y] = new TxtWorkpiece(_wp);
 		Notify();
+		std::cout << "Notify function inside TxtHighBayWarehouseStorage::store is called after checking this condition: isValidPos(nextFetchPos)" << std::endl;
 		print();
 		return true;
 	}

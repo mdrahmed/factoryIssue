@@ -168,6 +168,7 @@ void TxtHighBayWarehouse::fsmStep()
 		{
 			if (reqVGRwp && store(*reqVGRwp))
 			{
+				std::cout << "store function is called" << std::endl;
 				FSM_TRANSITION( IDLE, color=green, label='workpiece\nstored' );
 			}
 			else

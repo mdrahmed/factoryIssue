@@ -196,6 +196,7 @@ bool TxtHighBayWarehouse::putConv(bool stop)
 
 bool TxtHighBayWarehouse::store(TxtWorkpiece wp)
 {
+	std::cout << "store function inside TxtHighBayWarehouse is called" << std::endl;
 	SPDLOG_LOGGER_TRACE(spdlog::get("console"), "store {}", wp.type);
 	setActStatus(true, SM_BUSY);
 	if (storage.store(wp))
