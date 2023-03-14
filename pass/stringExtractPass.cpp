@@ -68,15 +68,17 @@ bool CPSTracker::runOnModule(Module &M) {
 			arg_strings.push_back(rso.str());
 			arg_values.push_back(i);
 		}
-
-		if(F.getName().contains("subtract") || F.getName().contains("strr")){	
+	
 		// Added HBW functions	
+		if(F.getName().contains("subtract") || F.getName().contains("str") || F.getName().contains("main")){
 		//if(F.getName().contains("FSM_TRANSITION") || F.getName().contains("make_message") || F.getName().contains("subTopic") || F.getName().contains("fetch") || F.getName().contains("store") || F.getName().contains("Notify") || F.getName().contains("Update") ||  F.getName().contains("message_arrived") || F.getName().contains("publish") || F.getName().contains("requestVGRfetchContainer") || F.getName().contains("requestOrder") || F.getName().contains("startThread") || F.getName().contains("start_thread") || F.getName().contains("run") || F.getName().contains("fsmStep") || F.getName().contains("printState") || F.getName().contains("setTarget") || F.getName().contains("moveDeliveryInAndGrip") || F.getName().contains("moveNFC") ){
 		// I am instrumenting only these certain functions
 		//if(F.getName().contains("message_arrived") || F.getName().contains("publish") || F.getName().contains("requestOrder") || F.getName().contains("startThread") || F.getName().contains("start_thread") || F.getName().contains("run") || F.getName().contains("fsmStep") || F.getName().contains("printState") || F.getName().contains("setTarget") || F.getName().contains("moveDeliveryInAndGrip") || F.getName().contains("moveNFC") ){
-			if(F.getName() == "printf" || F.getName().startswith("llvm.dbg"))
-				continue;
 			//This for loop will get the user function i.e., suppose I got a function "message_arrived", then following iterator will tell me the function calling this function.		
+			
+			if(F.getName().contains("printf"))
+				break;	
+
 			for(auto ui=F.use_begin();ui!=F.use_end();ui++){
 				if(auto I = dyn_cast<Instruction>(ui->getUser())){
 					auto *BB = I->getParent();
@@ -107,9 +109,6 @@ bool CPSTracker::runOnModule(Module &M) {
 			}
 			// If a function is declared then it will not have basic blocks in them. So, if a function is not delcared then it will have basic block, which I need to insert printf
 			if(!F.isDeclaration()){
-				if(F.getName().contains("store") && F.getName().contains("TxtHighBayWarehouse"))
-                                	errs()<<"store functioni inside HBW is instrumented"<<F.getName()<<"\n";
-
 				auto &BB = F.getEntryBlock();        
 				std::vector<std::string> arguments; // This vector will be used to store functions arguments name
 				BasicBlock::iterator IP = BB.getFirstInsertionPt();
@@ -169,7 +168,7 @@ bool CPSTracker::runOnModule(Module &M) {
 					// using the format specifier for printing the values
 					std::string format("arg_values: ");
 					for (size_t i = 0; i < arg_values.size(); ++i) {
-						format += "%d\n";
+						format += "%s\n";
 					}
 					Value *str = builder.CreateGlobalStringPtr(format, "");
 					std::vector<Value *> argsV({str});
@@ -177,43 +176,77 @@ bool CPSTracker::runOnModule(Module &M) {
 					// That's why I am bitcasting the values to a 32-bit result and then pushing it. But only this part is causing the error. 
 					
 					// Worked with 32 bit int and then all values except pointer and array worked
+					
 					for (auto &v : arg_values) {
-					        //argsV.push_back(builder.CreateGlobalStringPtr(v->getName(), ""));
-					        const DataLayout &DL = M.getDataLayout();
-					        unsigned SourceBitWidth = DL.getTypeSizeInBits(v->getType());
-					        //unsigned SourceBitWidth = cast<IntegerType>(v->getType())->getBitWidth();;
-					        IntegerType *IntTy = builder.getIntNTy(SourceBitWidth);
-					        //Value *IntResult = builder.CreateBitCast(v, IntTy);
-						
-						Value *IntResult;
-						//if(F.getName().contains("message_arrived")){
-						//	char char_array[256];
-						//	sprintf(char_array, "%s", argsV.getName().data());
-						//	printf("%s\n", char_array);
-
-						//}
-						if(v->getType()->isArrayTy()){
-							continue;
-						//	auto *ArrayTy = dyn_cast<ArrayType>(v->getType());
-       						//	auto NumElements = ArrayTy->getNumElements();
-       						//	auto *NewArrayType = ArrayType::get(ArrayTy->getElementType(), NumElements);
-       						//	auto *NewIntArrayType = ArrayType::get(builder.getIntNTy(SourceBitWidth), NumElements);
-       						//	auto *NewArray = builder.CreateBitCast(v, NewArrayType);
-       						//	IntResult = builder.CreateBitCast(NewArray, NewIntArrayType);
-						}
 						if(v->getType()->isPointerTy()){
-							IntResult = builder.CreatePtrToInt(v, IntTy);
-						}	
-						else{
-							IntResult = builder.CreateBitCast(v, IntTy);
-						}
-					        Value *Int32Result = builder.CreateSExtOrTrunc(IntResult, Type::getInt32Ty(context));
-					        //llvm_unreachable("Invalid type for cast");
-						argsV.push_back(Int32Result);
-						////Value *ty = Int32Result->getType(); //problem is here
-						////argsV.push_back(ty);
-						//}
+							llvm::Value *loadedValue = builder.CreateLoad(v->getType()->getPointerElementType(),v);
+							argsV.push_back(loadedValue);
+							//argsV.push_back(builder.CreateGlobalStringPtr("pointer"));
+							continue;
+                                                }
+						argsV.push_back(v);
 					}
+					
+					//for (auto &v : arg_values) {
+					//        //argsV.push_back(builder.CreateGlobalStringPtr(v->getName(), ""));
+					//        const DataLayout &DL = M.getDataLayout();
+					//        unsigned SourceBitWidth = DL.getTypeSizeInBits(v->getType());
+					//        //unsigned SourceBitWidth = cast<IntegerType>(v->getType())->getBitWidth();;
+					//        IntegerType *IntTy = builder.getIntNTy(SourceBitWidth);
+					//        //Value *IntResult = builder.CreateBitCast(v, IntTy);
+
+					//	std::string value_str;
+    					//	llvm::raw_string_ostream rso(value_str);
+    					//	v->print(rso);
+
+    					//	// Create global string pointer that points to the string value
+    					//	auto value_ptr = builder.CreateGlobalStringPtr(value_str, "value_str");
+
+					//	//std:: string topic;
+					//	//raw_string_ostream t(topic);
+					//	//Value *tval = v;
+					//	//tval<<*v;
+					//	//argsV.push_back(builder.CreateGlobalStringPtr(tval->str(), ""));
+
+					//	//StringRef str = argsV[0]->getName();
+					//	//argsV.push_back(builder.CreateGlobalStringPtr(str.data(), ""));
+					//	
+					//	//Value *IntResult;
+					//	//if(F.getName().contains("subtract")){
+					//	//	//char char_array[256];
+					//	//	StringRef str = argsV[0]->getName();
+    					//	//	//printf("msg: %.*s\n", (int) str.size(), str.data());
+					//	//	printf("msg: %s\n", str.data());
+
+					//	//	Value *val = argsV[0];
+					//	//	outs()<<*val<<"\n";
+					//	//	
+					//	//	val->print(rso);
+					//	//	printf("As string: %s\n", rso.str().c_str());
+
+					//	//}
+					//	//if(v->getType()->isArrayTy()){
+					//	//	continue;
+					//	////	auto *ArrayTy = dyn_cast<ArrayType>(v->getType());
+       					//	////	auto NumElements = ArrayTy->getNumElements();
+       					//	////	auto *NewArrayType = ArrayType::get(ArrayTy->getElementType(), NumElements);
+       					//	////	auto *NewIntArrayType = ArrayType::get(builder.getIntNTy(SourceBitWidth), NumElements);
+       					//	////	auto *NewArray = builder.CreateBitCast(v, NewArrayType);
+       					//	////	IntResult = builder.CreateBitCast(NewArray, NewIntArrayType);
+					//	//}
+					//	//if(v->getType()->isPointerTy()){
+					//	//	IntResult = builder.CreatePtrToInt(v, IntTy);
+					//	//}	
+					//	//else{
+					//	//	IntResult = builder.CreateBitCast(v, IntTy);
+					//	//}
+					//        //Value *Int32Result = builder.CreateSExtOrTrunc(IntResult, Type::getInt32Ty(context));
+					//        ////llvm_unreachable("Invalid type for cast");
+					//	//argsV.push_back(Int32Result);
+					//	////Value *ty = Int32Result->getType(); //problem is here
+					//	////argsV.push_back(ty);
+					//	//}
+					//}
 					builder.CreateCall(printfFunc, argsV, "calltmp"); 
 				}
 

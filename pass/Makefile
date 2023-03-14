@@ -7,12 +7,15 @@ CLANG=clang++-14
 PASS=instrument.so
 #PASS_SRC=shortPass.cpp
 #PASS_SRC=longPass.cpp 
-PASS_SRC=IfConditionFinder.cpp
+#PASS_SRC=IfConditionFinder.cpp
+#PASS_SRC=newLongPass.cpp
+PASS_SRC=stringExtractPass.cpp
 LL=example.ll
+MODIFIED=modified.ll
 CPP_file=example.cpp
 Objects=ex instrument.so *.ll
 
-all: $(LL) $(PASS) ex 
+all: $(LL) $(PASS) ex $(MODIFIED)
 	
 $(LL): $(CPP_file)
 	$(CLANG) -o $@ -S -emit-llvm $<
@@ -22,6 +25,9 @@ $(PASS): $(PASS_SRC)
 
 ex: $(CPP_file)  
 	$(CLANG) -o $@ -fno-discard-value-names -flegacy-pass-manager -g -Xclang -load -Xclang ./instrument.so $<
+
+$(MODIFIED): $(LL)
+	$(CLANG) -o $@ -S -emit-llvm -fno-discard-value-names -flegacy-pass-manager -g -Xclang -load -Xclang ./instrument.so $<
 
 .PHONY: clean
 clean:

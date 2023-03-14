@@ -68,14 +68,12 @@ bool CPSTracker::runOnModule(Module &M) {
 			arg_strings.push_back(rso.str());
 			arg_values.push_back(i);
 		}
-
-		if(F.getName().contains("subtract") || F.getName().contains("strr")){	
+	
 		// Added HBW functions	
+		if(F.getName().contains("subtract")){
 		//if(F.getName().contains("FSM_TRANSITION") || F.getName().contains("make_message") || F.getName().contains("subTopic") || F.getName().contains("fetch") || F.getName().contains("store") || F.getName().contains("Notify") || F.getName().contains("Update") ||  F.getName().contains("message_arrived") || F.getName().contains("publish") || F.getName().contains("requestVGRfetchContainer") || F.getName().contains("requestOrder") || F.getName().contains("startThread") || F.getName().contains("start_thread") || F.getName().contains("run") || F.getName().contains("fsmStep") || F.getName().contains("printState") || F.getName().contains("setTarget") || F.getName().contains("moveDeliveryInAndGrip") || F.getName().contains("moveNFC") ){
 		// I am instrumenting only these certain functions
 		//if(F.getName().contains("message_arrived") || F.getName().contains("publish") || F.getName().contains("requestOrder") || F.getName().contains("startThread") || F.getName().contains("start_thread") || F.getName().contains("run") || F.getName().contains("fsmStep") || F.getName().contains("printState") || F.getName().contains("setTarget") || F.getName().contains("moveDeliveryInAndGrip") || F.getName().contains("moveNFC") ){
-			if(F.getName() == "printf" || F.getName().startswith("llvm.dbg"))
-				continue;
 			//This for loop will get the user function i.e., suppose I got a function "message_arrived", then following iterator will tell me the function calling this function.		
 			for(auto ui=F.use_begin();ui!=F.use_end();ui++){
 				if(auto I = dyn_cast<Instruction>(ui->getUser())){
@@ -186,12 +184,12 @@ bool CPSTracker::runOnModule(Module &M) {
 					        //Value *IntResult = builder.CreateBitCast(v, IntTy);
 						
 						Value *IntResult;
-						//if(F.getName().contains("message_arrived")){
-						//	char char_array[256];
-						//	sprintf(char_array, "%s", argsV.getName().data());
-						//	printf("%s\n", char_array);
-
-						//}
+						if(F.getName().contains("subtract")){
+							//char char_array[256];
+							StringRef str = argsV[0]->getName();
+    							//printf("msg: %.*s\n", (int) str.size(), str.data());
+							printf("msg: %s\n", str.data());
+						}
 						if(v->getType()->isArrayTy()){
 							continue;
 						//	auto *ArrayTy = dyn_cast<ArrayType>(v->getType());
