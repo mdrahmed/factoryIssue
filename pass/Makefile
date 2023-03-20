@@ -12,7 +12,7 @@ PASS=instrument.so
 PASS_SRC=stringExtractPass.cpp
 LL=example.ll
 MODIFIED=modified.ll
-CPP_file=example.cpp
+CPP_file=sharedPointer.cpp
 Objects=ex instrument.so *.ll
 
 all: $(LL) $(PASS) ex $(MODIFIED)
